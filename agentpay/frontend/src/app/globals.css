@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0a0b0e;
+    --bg-secondary: #111318;
+    --bg-card: #161820;
+    --bg-card-hover: #1c1f28;
+    --border: #252836;
+    --border-subtle: #1a1d26;
+    --text-primary: #f0f1f5;
+    --text-secondary: #8b8fa8;
+    --text-muted: #555970;
+    --accent: #6366f1;
+    --accent-hover: #7c3aed;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --success: #22c55e;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --warning: #f59e0b;
+    --warning-bg: rgba(245, 158, 11, 0.1);
+    --danger: #ef4444;
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --pending: #a78bfa;
+    --pending-bg: rgba(167, 139, 250, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code, pre, .mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+}
+
+@layer components {
+  /* ── Cards ────────────────────────────────── */
+  .card {
+    @apply rounded-xl border;
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200;
+  }
+  .card-hover:hover {
+    background: var(--bg-card-hover);
+    border-color: #2d3148;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  /* ── Buttons ──────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1;
+    focus-ring-color: var(--accent);
+  }
+
+  .btn-primary {
+    @apply btn text-white;
+    background: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-secondary {
+    @apply btn;
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: #3d4168; }
+
+  .btn-danger {
+    @apply btn text-white;
+    background: var(--danger);
+  }
+  .btn-danger:hover { opacity: 0.85; }
+
+  .btn-ghost {
+    @apply btn;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  /* ── Status Badges ────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning); }
+  .badge-pending { background: var(--pending-bg); color: var(--pending); }
+  .badge-neutral { background: rgba(139,143,168,0.1); color: var(--text-secondary); }
+
+  /* ── Inputs ───────────────────────────────── */
+  .input {
+    @apply w-full rounded-lg px-3 py-2 text-sm transition-colors;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .input::placeholder { color: var(--text-muted); }
+
+  .input-label {
+    @apply block text-xs font-medium mb-1.5;
+    color: var(--text-secondary);
+  }
+
+  /* ── Tables ───────────────────────────────── */
+  .data-table {
+    @apply w-full text-sm;
+  }
+  .data-table thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-medium uppercase tracking-wider;
+    color: var(--text-muted);
+  }
+  .data-table tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.1s;
+  }
+  .data-table tbody tr:hover { background: var(--bg-card-hover); }
+  .data-table td { @apply px-4 py-3; }
+
+  /* ── Stat cards ───────────────────────────── */
+  .stat-card {
+    @apply card p-5;
+  }
+  .stat-value {
+    @apply text-2xl font-semibold mt-1;
+    color: var(--text-primary);
+  }
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-wide;
+    color: var(--text-muted);
+  }
+
+  /* ── Sidebar ──────────────────────────────── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150;
+    color: var(--text-secondary);
+  }
+  .sidebar-item:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+  .sidebar-item.active {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(99,102,241,0.2);
+  }
+
+  /* ── Scrollbar ────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+}
+
+/* ── Animations ───────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.2s ease-out; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }

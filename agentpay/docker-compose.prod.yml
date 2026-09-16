@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: frame-prod-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-frame}
+      POSTGRES_USER: ${POSTGRES_USER:-frame_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frame_secure_password_replace}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-frame_user} -d ${POSTGRES_DB:-frame}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - frame_internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: frame-prod-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - frame_internal
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: frame-prod-backend
+    restart: unless-stopped
+    command: >
+      sh -c "node dist/db/migrate.js && node dist/index.js"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-frame_user}:${POSTGRES_PASSWORD:-frame_secure_password_replace}@postgres:5432/${POSTGRES_DB:-frame}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      API_KEY_SALT: ${API_KEY_SALT}
+      PORT: 3001
+      NODE_ENV: production
+      FRAME_ENV: ${FRAME_ENV:-production}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-razorpay}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - frame_internal
+      - frame_public
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/v1}
+    container_name: frame-prod-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      - backend
+    networks:
+      - frame_internal
+      - frame_public
+
+  nginx:
+    image: nginx:alpine
+    container_name: frame-prod-nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT_HTTP:-80}:80"
+      - "${PORT_HTTPS:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - frame_public
+
+networks:
+  frame_internal:
+    internal: true
+  frame_public:
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:

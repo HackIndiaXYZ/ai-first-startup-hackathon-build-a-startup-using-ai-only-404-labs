@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Build Outputs
+dist/
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/

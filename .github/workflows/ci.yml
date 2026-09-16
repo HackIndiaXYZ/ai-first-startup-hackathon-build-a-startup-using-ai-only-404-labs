@@ -1,0 +1,103 @@
+name: Frame CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-checks:
+    name: Backend Lint, Build & Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: frame
+          POSTGRES_USER: frame
+          POSTGRES_PASSWORD: frame_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: agentpay/backend/package.json
+
+      - name: Install Dependencies
+        working-directory: agentpay/backend
+        run: npm ci
+
+      - name: Typecheck / Lint
+        working-directory: agentpay/backend
+        run: npm run lint
+
+      - name: Build TypeScript
+        working-directory: agentpay/backend
+        run: npm run build
+
+      - name: Run Database Migrations
+        working-directory: agentpay/backend
+        env:
+          DATABASE_URL: postgres://frame:frame_dev_password@localhost:5432/frame
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: dev-jwt-secret-change-in-prod-must-be-32-chars-min
+          API_KEY_SALT: dev-salt-change-in-prod
+        run: npm run migrate
+
+      - name: Run Security Tests
+        working-directory: agentpay/backend
+        env:
+          DATABASE_URL: postgres://frame:frame_dev_password@localhost:5432/frame
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: dev-jwt-secret-change-in-prod-must-be-32-chars-min
+          API_KEY_SALT: dev-salt-change-in-prod
+        run: npm run test:security
+
+  frontend-checks:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: agentpay/frontend/package.json
+
+      - name: Install Dependencies
+        working-directory: agentpay/frontend
+        run: npm ci
+
+      - name: Production Build
+        working-directory: agentpay/frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+        run: npm run build

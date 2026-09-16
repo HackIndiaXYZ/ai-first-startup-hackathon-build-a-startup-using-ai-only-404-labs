@@ -1,0 +1,22 @@
+{
+  "name": "frame-agentpay-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frame — Autonomous AI Agent Payments Infrastructure",
+  "scripts": {
+    "dev": "npx -y concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "lint": "npm --prefix backend run lint",
+    "test": "npm --prefix backend test",
+    "test:mcp-external": "npm --prefix backend run test:mcp-external",
+    "test:e2e-external": "npm --prefix backend run test:e2e-external",
+    "test:payment-authority": "npm --prefix backend run test:payment-authority",
+    "test:payment-rail": "npm --prefix backend run test:payment-rail",
+    "test:agent-checkout": "npm --prefix backend run test:agent-checkout",
+    "test:real-agent-payment": "npm --prefix backend run test:real-agent-payment",
+    "test:sdk-ts": "npm --prefix backend run test:sdk-ts",
+    "test:sdk-py": "npm --prefix backend run test:sdk-py"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@frame-pay/sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript/JavaScript SDK for Frame — Autonomous Agent Payments with Policy Guardrails",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["ai-agents", "payments", "guardrails", "fintech", "autonomous-agents", "frame"],
+  "author": "Frame Engineering",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7"
+  }
+}

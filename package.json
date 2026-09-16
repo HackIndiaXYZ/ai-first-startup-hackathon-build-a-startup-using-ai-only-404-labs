@@ -1,0 +1,22 @@
+{
+  "name": "frame-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frame Root Workspace",
+  "scripts": {
+    "dev": "npm --prefix agentpay run dev",
+    "dev:backend": "npm --prefix agentpay run dev:backend",
+    "dev:frontend": "npm --prefix agentpay run dev:frontend",
+    "build": "npm --prefix agentpay run build",
+    "lint": "npm --prefix agentpay run lint",
+    "test": "npm --prefix agentpay test",
+    "test:mcp-external": "npm --prefix agentpay run test:mcp-external",
+    "test:e2e-external": "npm --prefix agentpay run test:e2e-external",
+    "test:payment-authority": "npm --prefix agentpay run test:payment-authority",
+    "test:payment-rail": "npm --prefix agentpay run test:payment-rail",
+    "test:agent-checkout": "npm --prefix agentpay run test:agent-checkout",
+    "test:real-agent-payment": "npm --prefix agentpay run test:real-agent-payment",
+    "test:sdk-ts": "npm --prefix agentpay run test:sdk-ts",
+    "test:sdk-py": "npm --prefix agentpay run test:sdk-py"
+  }
+}
