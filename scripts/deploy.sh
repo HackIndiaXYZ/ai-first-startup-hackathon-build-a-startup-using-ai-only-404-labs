@@ -134,6 +134,16 @@ show_cloud_guides() {
   echo ""
 }
 
+start_tunnel() {
+  log_header "Free Instant Public HTTPS Tunnel"
+  log_info "Creating instant free public tunnel for Frontend (port 3000)..."
+  echo ""
+  echo -e "${GREEN}Running localtunnel on port 3000...${NC}"
+  echo -e "Press Ctrl+C anytime to stop."
+  echo ""
+  npx localtunnel --port 3000
+}
+
 print_help() {
   cat << EOF
 Frame Deployment CLI
@@ -142,16 +152,17 @@ Usage:
   ./scripts/deploy.sh [command]
 
 Commands:
+  tunnel       Start an instant, 100% free public HTTPS tunnel for live testing
   check        Verify all dependencies and environment prerequisites
   build        Build production bundles for both backend and frontend
   migrate      Apply database schema migrations
   prod         Build and launch complete production stack via Docker Compose
-  cloud        Display step-by-step cloud deployment guide (Render/Railway/Vercel)
+  cloud        Display step-by-step 100% free cloud deployment guide (Render/Vercel)
   help         Display this help message
 
 Examples:
+  ./scripts/deploy.sh tunnel
   ./scripts/deploy.sh check
-  ./scripts/deploy.sh build
   ./scripts/deploy.sh prod
 EOF
 }
@@ -160,6 +171,9 @@ EOF
 CMD="${1:-help}"
 
 case "$CMD" in
+  tunnel)
+    start_tunnel
+    ;;
   check)
     check_prerequisites
     ;;

@@ -6,20 +6,20 @@ databases:
   - name: frame-postgres
     databaseName: frame
     user: frame
-    plan: starter
+    plan: free
 
 services:
   # Managed Redis Cache & Queue
   - type: redis
     name: frame-redis
-    plan: starter
+    plan: free
     ipAllowList: []
 
   # Frame Backend API & Worker
   - type: web
     name: frame-backend
     env: node
-    plan: starter
+    plan: free
     rootDir: agentpay/backend
     buildCommand: npm ci && npm run build
     preDeployCommand: npm run db:migrate:prod
@@ -60,7 +60,7 @@ services:
   - type: web
     name: frame-frontend
     env: node
-    plan: starter
+    plan: free
     rootDir: agentpay/frontend
     buildCommand: npm ci && npm run build
     startCommand: npm run start
