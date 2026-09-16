@@ -22,8 +22,7 @@ services:
     plan: free
     rootDir: agentpay/backend
     buildCommand: npm ci && npm run build
-    preDeployCommand: npm run db:migrate:prod
-    startCommand: npm run start
+    startCommand: npm run db:migrate:prod && npm run start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
