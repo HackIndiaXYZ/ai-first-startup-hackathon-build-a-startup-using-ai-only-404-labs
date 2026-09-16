@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+let rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+if (rawApiBase && !rawApiBase.startsWith('http://') && !rawApiBase.startsWith('https://')) {
+  rawApiBase = `https://${rawApiBase}`;
+}
+const API_BASE = rawApiBase.replace(/\/$/, '');
 
 class ApiClient {
   private baseUrl: string;

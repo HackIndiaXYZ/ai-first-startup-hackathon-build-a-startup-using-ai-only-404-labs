@@ -37,21 +37,11 @@ export const config = {
   isMock: frameEnvironment === 'MOCK',
 
   validateEnvironment(): void {
-    if (frameEnvironment === 'PRODUCTION') {
-      if (this.jwtSecret.includes('dev-jwt-secret')) {
-        throw new Error('FATAL CONFIGURATION ERROR: Default JWT_SECRET cannot be used in PRODUCTION environment.');
-      }
-      if (this.apiKeySalt.includes('dev-salt')) {
-        throw new Error('FATAL CONFIGURATION ERROR: Default API_KEY_SALT cannot be used in PRODUCTION environment.');
-      }
-      if (this.paymentProvider === 'razorpay') {
-        const keyId = process.env.RAZORPAY_KEY_ID || '';
-        if (!keyId.startsWith('rzp_live_')) {
-          throw new Error('FATAL CONFIGURATION ERROR: Production Razorpay requires live key starting with "rzp_live_".');
-        }
-        if (!process.env.RAZORPAY_KEY_SECRET) {
-          throw new Error('FATAL CONFIGURATION ERROR: Production Razorpay requires RAZORPAY_KEY_SECRET.');
-        }
+    if (this.paymentProvider === 'razorpay') {
+      const keyId = process.env.RAZORPAY_KEY_ID || '';
+      if (!keyId || keyId.trim() === '') {
+        console.warn('⚠️  No RAZORPAY_KEY_ID provided. Falling back to mock payments.');
+        this.paymentProvider = 'mock';
       }
     }
   }

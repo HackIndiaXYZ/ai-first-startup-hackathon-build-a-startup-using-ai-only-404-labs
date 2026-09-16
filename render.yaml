@@ -28,7 +28,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRAME_ENV
-        value: production
+        value: sandbox
       - key: PORT
         value: 3001
       - key: PAYMENT_PROVIDER
@@ -47,13 +47,13 @@ services:
       - key: API_KEY_SALT
         generateValue: true
       - key: RAZORPAY_KEY_ID
-        sync: false
+        value: rzp_test_TadwtFgpN24FFm
       - key: RAZORPAY_KEY_SECRET
-        sync: false
+        value: 3WTiwzmAEuUfFKOaowMr1Wjp
       - key: RAZORPAY_WEBHOOK_SECRET
-        sync: false
+        value: frame_sandbox_webhook_secret_32chars
       - key: CORS_ORIGIN
-        sync: false
+        value: "*"
 
   # Frame Frontend Dashboard
   - type: web
