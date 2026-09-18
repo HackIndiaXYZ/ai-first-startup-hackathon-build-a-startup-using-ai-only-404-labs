@@ -1,14 +1,42 @@
-let rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-if (rawApiBase && !rawApiBase.startsWith('http://') && !rawApiBase.startsWith('https://')) {
-  rawApiBase = `https://${rawApiBase}`;
+export function resolveApiBase(): string {
+  let url = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // If Render inlined service name like 'frame-backend-868z' without dot/TLD
+    if (url && !url.includes('.') && !url.includes('localhost')) {
+      url = `${url}.onrender.com`;
+    }
+    // If url is missing or still points to localhost while page is loaded on onrender.com
+    if ((!url || url.includes('localhost')) && host.includes('onrender.com')) {
+      url = 'https://frame-backend-868z.onrender.com';
+    }
+  } else {
+    if (url && !url.includes('.') && !url.includes('localhost')) {
+      url = `${url}.onrender.com`;
+    }
+  }
+
+  if (!url) {
+    url = 'http://localhost:3001';
+  }
+
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+
+  return url.replace(/\/$/, '');
 }
-const API_BASE = rawApiBase.replace(/\/$/, '');
 
 class ApiClient {
-  private baseUrl: string;
+  private suffix: string;
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+  constructor(suffix: string = '') {
+    this.suffix = suffix;
+  }
+
+  private getBaseUrl(): string {
+    return `${resolveApiBase()}${this.suffix}`;
   }
 
   private getToken(): string | null {
@@ -29,7 +57,8 @@ class ApiClient {
     }
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const baseUrl = this.getBaseUrl();
+    const res = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers,
     });
@@ -65,8 +94,8 @@ class ApiClient {
   delete<T>(path: string) { return this.request<T>(path, { method: 'DELETE' }); }
 }
 
-export const api = new ApiClient(`${API_BASE}/v1`);
-export const healthApi = new ApiClient(API_BASE);
+export const api = new ApiClient('/v1');
+export const healthApi = new ApiClient('');
 
 // ── Auth ──────────────────────────────────────────────
 

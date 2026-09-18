@@ -67,7 +67,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: frame-backend
-          property: host
+        value: https://frame-backend-868z.onrender.com
