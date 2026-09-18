@@ -40,7 +40,27 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ── Plugins ──────────────────────────────────────────
   await app.register(cors, {
-    origin: config.isDev ? '*' : ['https://frame.app'],
+    origin: (origin, cb) => {
+      // Allow requests with no origin (e.g. mobile apps, curl)
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+      // Allow all in dev, wildcard, onrender.com subdomains, localhost, or configured origin
+      if (
+        config.isDev ||
+        config.corsOrigin === '*' ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.endsWith('.onrender.com') ||
+        origin === 'https://frame.app' ||
+        origin === config.corsOrigin
+      ) {
+        cb(null, true);
+        return;
+      }
+      cb(null, false);
+    },
     credentials: true,
   });
 

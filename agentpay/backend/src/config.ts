@@ -35,6 +35,7 @@ export const config = {
   isSandbox: frameEnvironment === 'SANDBOX',
   isProduction: frameEnvironment === 'PRODUCTION',
   isMock: frameEnvironment === 'MOCK',
+  corsOrigin: process.env.CORS_ORIGIN || '*',
 
   validateEnvironment(): void {
     if (this.paymentProvider === 'razorpay') {
