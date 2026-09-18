@@ -6,13 +6,14 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import {
   LayoutDashboard, Bot, Shield, ShieldCheck, CreditCard, Clock, Receipt,
-  ScrollText, Plug, Settings, LogOut, ChevronRight, Wallet, Code2, Webhook
+  ScrollText, Plug, Settings, LogOut, ChevronRight, Wallet, Code2, Webhook, FlaskConical
 } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { href: '/dashboard/developers', icon: Code2, label: 'Developers' },
   { href: '/dashboard/agents', icon: Bot, label: 'Agents' },
+  { href: '/dashboard/agent-demo', icon: FlaskConical, label: 'Agent Demo' },
   { href: '/dashboard/payment-authorities', icon: ShieldCheck, label: 'Authorities' },
   { href: '/dashboard/policies', icon: Shield, label: 'Policies' },
   { href: '/dashboard/payments', icon: CreditCard, label: 'Payments' },
