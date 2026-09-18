@@ -6,6 +6,7 @@ import { ProductCandidate } from '../shopping/product';
 import { selectBestProduct } from '../shopping/ranking';
 import { MerchantAdapter } from '../merchants/merchant-adapter';
 import { DemoStoreMerchantAdapter } from '../merchants/demo-store-adapter';
+import { BrowserMerchantAdapter } from '../merchants/browser-merchant-adapter';
 import { canonicalizeCheckout, CanonicalCheckout } from '../checkout/checkout-extractor';
 import { verifyIntentBinding } from '../checkout/intent-binding';
 import { FrameMcpClient, CreatePaymentIntentResult } from '../frame/frame-mcp-client';
@@ -14,14 +15,28 @@ import { AgentLogger } from '../observability/logger';
 import { defaultExecutionStore, ExecutionStore } from '../state/execution-store';
 import { LLMProvider } from '../llm/provider';
 import { DeterministicRuleProvider } from '../llm/deterministic';
+import { OpenAICompatibleProvider } from '../llm/openai-compatible';
+import { AnthropicProvider } from '../llm/anthropic-provider';
 import { scanUntrustedContent } from '../security/prompt-injection';
 import { assertNoSensitiveData } from '../security/sensitive-data';
+import { CostController } from './cost-controller';
 
 export interface ShoppingAgentConfig {
   merchantAdapter?: MerchantAdapter;
   frameClient?: FrameMcpClient;
   llmProvider?: LLMProvider;
   executionStore?: ExecutionStore;
+  useBrowserAutomation?: boolean;
+}
+
+export function createDefaultLLMProvider(): LLMProvider {
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new AnthropicProvider();
+  }
+  if (process.env.OPENAI_API_KEY || process.env.LLM_API_KEY) {
+    return new OpenAICompatibleProvider();
+  }
+  return new DeterministicRuleProvider();
 }
 
 export class ShoppingAgent {
@@ -31,9 +46,16 @@ export class ShoppingAgent {
   private store: ExecutionStore;
 
   constructor(config: ShoppingAgentConfig = {}) {
-    this.merchant = config.merchantAdapter || new DemoStoreMerchantAdapter();
+    if (config.merchantAdapter) {
+      this.merchant = config.merchantAdapter;
+    } else if (config.useBrowserAutomation) {
+      this.merchant = new BrowserMerchantAdapter();
+    } else {
+      this.merchant = new DemoStoreMerchantAdapter();
+    }
+
     this.frame = config.frameClient || new FrameMcpClient();
-    this.llm = config.llmProvider || new DeterministicRuleProvider();
+    this.llm = config.llmProvider || createDefaultLLMProvider();
     this.store = config.executionStore || defaultExecutionStore;
   }
 
@@ -46,6 +68,116 @@ export class ShoppingAgent {
   }
 
   /**
+   * Resumes an execution that was paused in WAITING_FOR_HUMAN_APPROVAL or WAITING_FOR_HUMAN.
+   */
+  async resumeRun(runId: string): Promise<AgentExecutionState> {
+    const state = this.store.getRun(runId);
+    if (!state) {
+      throw new Error(`Run ${runId} not found in execution store`);
+    }
+
+    const bus = new AgentEventBus(runId);
+    const logger = new AgentLogger({ runId, prefix: 'FrameShoppingAgent' });
+
+    if (state.status !== 'WAITING_FOR_HUMAN_APPROVAL' && state.status !== 'WAITING_FOR_HUMAN') {
+      logger.info(`Run ${runId} is not in a paused state (current: ${state.status}). No resumption required.`);
+      return state;
+    }
+
+    const paymentIntentId = state.framePaymentIntent?.payment_intent_id;
+    if (!paymentIntentId || !state.canonicalCheckout) {
+      throw new Error(`Cannot resume run ${runId}: missing payment intent or checkout snapshot.`);
+    }
+
+    logger.info(`Checking approval status for payment intent ${paymentIntentId}…`);
+    bus.emitEvent('approval.checked', `Querying Frame for approval status of payment intent ${paymentIntentId}`);
+
+    const statusResult = await this.frame.getPaymentIntentStatus(paymentIntentId);
+
+    // If human principal approved in Frame dashboard
+    if (statusResult.status === 'SUCCESS' || statusResult.status === 'AUTHORIZED' || statusResult.status === 'SETTLED') {
+      bus.emitEvent('approval.granted', `Human principal approved payment intent ${paymentIntentId}. Resuming execution…`);
+
+      state.status = 'EXECUTING_PAYMENT';
+      state.updatedAt = new Date().toISOString();
+      this.store.saveRun(state);
+
+      bus.emitEvent('payment.started', `Payment intent ${paymentIntentId} authorized. Confirming merchant order…`);
+
+      const merchantConfirmed = await this.merchant.confirmPayment(
+        state.canonicalCheckout.order_id,
+        paymentIntentId
+      );
+
+      if (!merchantConfirmed) {
+        throw new Error(`Merchant failed to confirm payment for order ${state.canonicalCheckout.order_id}`);
+      }
+
+      state.orderConfirmation = {
+        orderId: state.canonicalCheckout.order_id,
+        merchant: state.canonicalCheckout.merchant_name,
+        amount: state.canonicalCheckout.total_rupees,
+        currency: state.canonicalCheckout.currency,
+        status: 'PAID_AND_FULFILLED',
+        confirmedAt: new Date().toISOString(),
+      };
+
+      bus.emitEvent('payment.succeeded', `Payment executed and settled for ₹${state.canonicalCheckout.total_rupees}`);
+      bus.emitEvent('order.completed', `Order ${state.canonicalCheckout.order_id} successfully confirmed with ${state.canonicalCheckout.merchant_name}`);
+
+      state.status = 'SUCCEEDED';
+      state.completedAt = new Date().toISOString();
+      state.updatedAt = new Date().toISOString();
+      this.store.saveRun(state);
+
+      bus.emitEvent('agent.completed', 'Autonomous shopping purchase successfully resumed and completed!');
+      return state;
+    }
+
+    // If rejected or cancelled
+    if (statusResult.status === 'REJECTED' || statusResult.status === 'CANCELLED' || statusResult.status === 'DENIED') {
+      state.status = 'TERMINATED_BY_POLICY';
+      state.completedAt = new Date().toISOString();
+      state.updatedAt = new Date().toISOString();
+      state.error = {
+        code: 'APPROVAL_REJECTED',
+        message: 'Transaction was rejected by human principal in Frame.',
+        step: 'TERMINATED_BY_POLICY',
+      };
+      this.store.saveRun(state);
+      bus.emitEvent('approval.rejected', 'Payment intent was rejected by human principal.');
+      return state;
+    }
+
+    // Still pending
+    bus.emitEvent('approval.pending', `Payment intent ${paymentIntentId} is still awaiting human authorization.`);
+    return state;
+  }
+
+  /**
+   * Cancels a running or paused agent run.
+   */
+  async cancelRun(runId: string, reason = 'Cancelled by user'): Promise<AgentExecutionState> {
+    const state = this.store.getRun(runId);
+    if (!state) {
+      throw new Error(`Run ${runId} not found.`);
+    }
+
+    const bus = new AgentEventBus(runId);
+    state.status = 'CANCELLED';
+    state.completedAt = new Date().toISOString();
+    state.updatedAt = new Date().toISOString();
+    state.error = {
+      code: 'USER_CANCELLED',
+      message: reason,
+      step: 'CANCELLED',
+    };
+    this.store.saveRun(state);
+    bus.emitEvent('agent.cancelled', `Agent execution cancelled: ${reason}`);
+    return state;
+  }
+
+  /**
    * Executes a complete autonomous shopping purchase workflow from natural language.
    */
   async execute(rawInstruction: string, options: { runId?: string; agentApiKey?: string } = {}): Promise<AgentExecutionState> {
@@ -53,6 +185,7 @@ export class ShoppingAgent {
     const conversationId = `conv_${ulid()}`;
     const bus = new AgentEventBus(runId);
     const logger = new AgentLogger({ runId, prefix: 'FrameShoppingAgent' });
+    const costController = new CostController();
 
     if (options.agentApiKey) {
       this.frame.setApiKey(options.agentApiKey);
@@ -74,6 +207,7 @@ export class ShoppingAgent {
     });
 
     const updateStatus = (status: AgentExecutionStatus) => {
+      costController.checkLiveness();
       state.status = status;
       state.updatedAt = new Date().toISOString();
       this.store.saveRun(state);
@@ -89,6 +223,7 @@ export class ShoppingAgent {
 
       // ── STEP 2: PARSE INTENT INTO IMMUTABLE STRUCTURE ────────────────────
       updateStatus('PARSING_INTENT');
+      costController.recordLlmIteration();
       logger.info('Parsing user natural-language intent into structured constraints');
       const userIntent = await parseUserIntent(rawInstruction, this.llm);
       state.userIntent = userIntent;
@@ -102,6 +237,7 @@ export class ShoppingAgent {
 
       // ── STEP 3: SEARCH PRODUCTS VIA MERCHANT ─────────────────────────────
       updateStatus('SEARCHING_CATALOG');
+      costController.recordBrowserAction();
       logger.info(`Searching merchant catalog for "${userIntent.product_type}" up to ₹${userIntent.max_amount_rupees}`);
       bus.emitEvent('search.started', `Querying merchant "${this.merchant.merchantName}" catalog for "${userIntent.product_type}"`);
 
@@ -137,10 +273,12 @@ export class ShoppingAgent {
 
       // ── STEP 5: ADD TO CART & PROCEED TO CHECKOUT ─────────────────────────
       updateStatus('CARTING_ITEM');
+      costController.recordBrowserAction();
       bus.emitEvent('cart.updated', `Added ${selection.selected.name} to cart`);
       const cart = await this.merchant.addToCart(selection.selected.id, userIntent.quantity);
 
       updateStatus('CHECKING_OUT');
+      costController.recordBrowserAction();
       bus.emitEvent('checkout.started', `Initiating merchant checkout session at ${this.merchant.merchantName}`);
       const checkoutSession = await this.merchant.proceedToCheckout(cart);
 
@@ -161,6 +299,7 @@ export class ShoppingAgent {
 
       // Fetch payment authorities to inspect constraints
       updateStatus('CHECKING_FRAME_AUTHORITY');
+      costController.recordToolCall();
       bus.emitEvent('frame.authority.checked', 'Querying Frame for active delegated payment authorities');
       const authorities = await this.frame.listAuthorities();
       const activeAuthority = authorities.find((a) => a.status === 'ACTIVE');
@@ -171,6 +310,7 @@ export class ShoppingAgent {
 
       // ── STEP 8: CREATE PAYMENT INTENT VIA FRAME POLICY FIREWALL ───────────
       updateStatus('CREATING_PAYMENT_INTENT');
+      costController.recordToolCall();
       const idempotencyKey = `agent_run_${runId}_${canonical.order_id}`;
 
       bus.emitEvent(
@@ -242,9 +382,9 @@ export class ShoppingAgent {
 
       // ── STEP 10: EXECUTE AUTHORIZED PAYMENT & CONFIRM ORDER ───────────────
       updateStatus('EXECUTING_PAYMENT');
+      costController.recordBrowserAction();
       bus.emitEvent('payment.started', `Payment intent ${paymentResult.payment_intent_id} authorized. Confirming merchant order…`);
 
-      // Confirm with merchant
       const merchantConfirmed = await this.merchant.confirmPayment(
         canonical.order_id,
         paymentResult.payment_intent_id
@@ -275,12 +415,13 @@ export class ShoppingAgent {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('Agent execution halted on error', { error: msg, status: state.status });
 
-      const isSecurityError = msg.includes('Security') || msg.includes('prohibited') || msg.includes('injection');
+      const isSecurityError = msg.includes('Security') || msg.includes('prohibited') || msg.includes('injection') || msg.includes('SSRF');
+      const isCostError = msg.includes('limit') || msg.includes('Halting runaway');
       const finalStatus: AgentExecutionStatus = isSecurityError ? 'TERMINATED_BY_SECURITY' : 'FAILED';
 
       state.status = finalStatus;
       state.error = {
-        code: isSecurityError ? 'SECURITY_VIOLATION' : 'EXECUTION_ERROR',
+        code: isSecurityError ? 'SECURITY_VIOLATION' : isCostError ? 'COST_LIMIT_EXCEEDED' : 'EXECUTION_ERROR',
         message: msg,
         step: state.status,
       };

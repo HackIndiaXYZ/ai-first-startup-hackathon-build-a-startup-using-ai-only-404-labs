@@ -16,9 +16,11 @@ export type AgentExecutionStatus =
   | 'CHECKING_FRAME_AUTHORITY'
   | 'CREATING_PAYMENT_INTENT'
   | 'WAITING_FOR_HUMAN_APPROVAL'
+  | 'WAITING_FOR_HUMAN'
   | 'EXECUTING_PAYMENT'
   | 'CONFIRMING_ORDER'
   | 'SUCCEEDED'
+  | 'CANCELLED'
   | 'FAILED'
   | 'TERMINATED_BY_POLICY'
   | 'TERMINATED_BY_SECURITY';
@@ -44,6 +46,7 @@ export interface AgentExecutionState {
   };
   humanInterventionRequired?: {
     reason: string;
+    question?: string;
     paymentIntentId?: string;
     requestedAt: string;
   };

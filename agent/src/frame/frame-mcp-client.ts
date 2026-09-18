@@ -282,6 +282,10 @@ export class FrameMcpClient {
     };
   }
 
+  async getPaymentIntentStatus(paymentIntentId: string): Promise<PaymentStatusResult> {
+    return this.getPaymentStatus(paymentIntentId);
+  }
+
   /**
    * 4. Request Human Approval
    */

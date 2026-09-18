@@ -145,9 +145,45 @@ npm run dev
 
 ---
 
+## 🛒 Autonomous AI Shopping Agent (`agent/`)
+
+Frame features a production-grade Autonomous AI Shopping Agent built on top of the Frame financial control plane. It interprets arbitrary natural language shopping requests, navigates storefronts using genuine Google Chrome browser automation, selects variants, manages carts, extracts semantic checkout summaries, and executes authorized payments under Frame's delegated authority.
+
+### Key Capabilities
+- **Real Browser Automation**: Powered by `playwright-core` driving local Google Chrome headlessly to perform real DOM actions (search, variant dropdown selection, cart updates, checkout extraction).
+- **Realistic Storefront**: Live semantic HTML pages (`/store`, `/store/products/:id`, `/store/cart`, `/store/checkout`, `/store/orders/:id`) with structured data attributes (`data-subtotal`, `data-shipping`, `data-total`, `data-order-id`).
+- **Dynamic ReAct Reasoning**: Multi-turn tool calling loop supporting Anthropic Claude, OpenAI, or local models, with deterministic fallback for offline testing.
+- **Durable Persistence**: State survives crashes and restarts, persisting to `agent/data/runs_store.json`.
+- **Zero-Trust Security**: Enforces frozen immutable user intent bounds, blocks private IP SSRF, detects adversarial prompt injections in HTML data, and refuses sensitive credential collection (UPI PIN, OTP, CVV).
+- **Human-in-the-Loop Resumption**: Transactions exceeding autonomous limits pause in `WAITING_FOR_HUMAN_APPROVAL`. Approving in the Frame Dashboard resumes the agent without restarting the journey.
+
+### Testing & Verification Commands
+
+```bash
+# 1. Run all Unit Tests (parser, binding, ranking, canonicalizer, sensitive data, prompt injection)
+npm --prefix agent run test:unit
+
+# 2. Run 20 Mandatory Security & Fail-Closed Scenarios
+npm --prefix agent run test:security
+
+# 3. Test Live Frame MCP Stdio Tool Discovery & Invocation
+npm --prefix agent run test:mcp
+
+# 4. Run Real Playwright Browser Automation with Google Chrome
+npm --prefix agent run test:browser
+
+# 5. Run All 14 Real End-to-End & Failure Journeys
+npm --prefix agent run test:failures
+
+# 6. Run Complete End-to-End Test Suite
+npm --prefix agent run test:e2e
+```
+
+---
+
 ## 🤖 Connecting External AI Agents via MCP
 
-Frame provides a built-in MCP server so external agents can query policies and execute payments securely.
+Frame provides a built-in MCP server so external agents (Claude Desktop, Cursor, Antigravity, AutoGPT) can query policies and execute payments securely. See [docs/EXTERNAL_AGENT_INTEGRATION.md](docs/EXTERNAL_AGENT_INTEGRATION.md) for full setup.
 
 ### Claude Desktop / Cursor MCP Configuration
 Add Frame MCP to your agent's config file (e.g., `claude_desktop_config.json`):
@@ -161,7 +197,7 @@ Add Frame MCP to your agent's config file (e.g., `claude_desktop_config.json`):
         "/path/to/frame/agentpay/backend/dist/mcp/index.js"
       ],
       "env": {
-        "FRAME_API_URL": "http://localhost:3001/v1",
+        "FRAME_API_URL": "https://frame-backend-868z.onrender.com/v1",
         "FRAME_AGENT_API_KEY": "frm_test_your_agent_key_here"
       }
     }

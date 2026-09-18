@@ -23,6 +23,8 @@
     "agent:serve": "npm --prefix agent run serve",
     "test:agent": "npm --prefix agent test",
     "test:agent-security": "npm --prefix agent run test:security",
+    "test:agent-browser": "npm --prefix agent run test:browser",
+    "test:agent-failures": "npm --prefix agent run test:failures",
     "test:agent-e2e": "npm --prefix agent run test:e2e"
   }
 }

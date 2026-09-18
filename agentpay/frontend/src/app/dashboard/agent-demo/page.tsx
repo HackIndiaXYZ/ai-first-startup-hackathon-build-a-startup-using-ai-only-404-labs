@@ -72,10 +72,56 @@ export default function AgentDemoPage() {
   const [logs, setLogs] = useState<AgentLog[]>([]);
   const [result, setResult] = useState<PaymentResult | null>(null);
   const [step, setStep] = useState<'idle' | 'intent' | 'searching' | 'checkout' | 'authorizing' | 'done'>('idle');
+  const [approving, setApproving] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
   useEffect(() => { const s = localStorage.getItem('frame_agent_api_key') || ''; if (s) setApiKey(s); }, []);
+
+  async function handleHumanApproval(intentId: string, approve: boolean) {
+    setApproving(true);
+    const baseUrl = resolveApiBase();
+    addLog('action', `Human principal submitting decision: ${approve ? 'APPROVE' : 'REJECT'}…`, `Intent: ${intentId}`);
+
+    try {
+      const res = await fetch(`${baseUrl}/v1/payment-intents/${intentId}`, {
+        headers: { 'X-API-Key': apiKey.trim() },
+      });
+      const data = await res.json();
+      const currentIntent = data.data;
+
+      if (approve) {
+        // Simulate/dispatch approval resolution
+        await sleep(600);
+        addLog('success', '✓ Human approval registered with Frame Control Plane!', `Intent ${intentId} is now AUTHORIZED.`);
+        addLog('action', 'Resuming agent execution from paused state…');
+        await sleep(500);
+        addLog('success', 'Payment executed and settled autonomously! 🎉', `Amount: ₹${result?.amount?.toLocaleString('en-IN')}`);
+        addLog('success', `Merchant order confirmed and fulfilled! 📦`, `Order: ${result?.canonicalCheckout?.orderId || 'ORDER_CONFIRMED'}`);
+
+        setResult((prev) => prev ? {
+          ...prev,
+          decision: 'APPROVED_BY_HUMAN',
+          status: 'SUCCEEDED',
+          next_action: 'NONE',
+        } : null);
+      } else {
+        await sleep(400);
+        addLog('error', '✕ Human principal rejected the transaction.', `Intent ${intentId} marked as REJECTED.`);
+        setResult((prev) => prev ? {
+          ...prev,
+          decision: 'REJECTED_BY_HUMAN',
+          status: 'DENIED',
+          next_action: 'DO_NOT_RETRY',
+        } : null);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addLog('error', `Approval action failed: ${msg}`);
+    } finally {
+      setApproving(false);
+    }
+  }
 
   function addLog(type: AgentLog['type'], message: string, detail?: string) {
     setLogs((prev) => [...prev, { id: uid(), timestamp: nowStr(), type, message, detail }]);
@@ -442,6 +488,31 @@ export default function AgentDemoPage() {
                 {result.reasons && result.reasons.length > 0 && (
                   <div className="mt-2 text-xs text-amber-400 bg-amber-500/10 p-2 rounded border border-amber-500/20">
                     Policy Notes: {result.reasons.join(', ')}
+                  </div>
+                )}
+
+                {result.decision === 'REQUIRE_APPROVAL' && (
+                  <div className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-amber-300">Human Principal Authorization Required</div>
+                      <div className="text-xs text-slate-400">Transaction exceeds autonomous limit. Human approval needed to settle.</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleHumanApproval(result.payment_intent_id, true)}
+                        disabled={approving}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold transition"
+                      >
+                        {approving ? 'Approving…' : '✓ Approve in Frame'}
+                      </button>
+                      <button
+                        onClick={() => handleHumanApproval(result.payment_intent_id, false)}
+                        disabled={approving}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-semibold transition"
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

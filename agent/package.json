@@ -12,12 +12,15 @@
     "test:unit": "ts-node tests/unit/intent-parser.test.ts && ts-node tests/unit/intent-binding.test.ts && ts-node tests/unit/product-ranking.test.ts && ts-node tests/unit/checkout-canonicalizer.test.ts && ts-node tests/unit/sensitive-credentials.test.ts && ts-node tests/unit/prompt-injection.test.ts",
     "test:security": "ts-node tests/security/20-security-scenarios.test.ts",
     "test:mcp": "ts-node tests/integration/mcp-client-live.test.ts",
+    "test:browser": "ts-node tests/integration/playwright-browser.test.ts",
+    "test:failures": "ts-node tests/e2e/all-14-failure-journeys.test.ts",
     "test:e2e": "ts-node tests/e2e/shopping-agent-e2e.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "fastify": "^4.28.1",
+    "playwright-core": "^1.63.0",
     "ulid": "^2.3.0",
     "zod": "^3.23.8"
   },

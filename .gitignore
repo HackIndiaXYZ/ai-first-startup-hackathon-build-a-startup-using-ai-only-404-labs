@@ -36,6 +36,7 @@ pnpm-debug.log*
 # Database & Container Data
 postgres_data/
 redis_data/
+agent/data/
 *.sqlite
 *.sqlite3
 
