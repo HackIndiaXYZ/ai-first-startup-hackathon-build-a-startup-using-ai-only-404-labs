@@ -1,0 +1,29 @@
+{
+  "name": "frame-shopping-agent",
+  "version": "1.0.0",
+  "description": "Real Autonomous AI Shopping Agent on Frame Financial Control Plane",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "agent": "ts-node src/cli/index.ts",
+    "agent:dev": "ts-node src/cli/index.ts",
+    "serve": "ts-node src/api/server.ts",
+    "test": "ts-node tests/unit/intent-parser.test.ts && ts-node tests/unit/intent-binding.test.ts && ts-node tests/unit/product-ranking.test.ts && ts-node tests/unit/checkout-canonicalizer.test.ts && ts-node tests/unit/sensitive-credentials.test.ts && ts-node tests/unit/prompt-injection.test.ts && ts-node tests/security/20-security-scenarios.test.ts && ts-node tests/integration/mcp-client-live.test.ts && ts-node tests/e2e/shopping-agent-e2e.test.ts",
+    "test:unit": "ts-node tests/unit/intent-parser.test.ts && ts-node tests/unit/intent-binding.test.ts && ts-node tests/unit/product-ranking.test.ts && ts-node tests/unit/checkout-canonicalizer.test.ts && ts-node tests/unit/sensitive-credentials.test.ts && ts-node tests/unit/prompt-injection.test.ts",
+    "test:security": "ts-node tests/security/20-security-scenarios.test.ts",
+    "test:mcp": "ts-node tests/integration/mcp-client-live.test.ts",
+    "test:e2e": "ts-node tests/e2e/shopping-agent-e2e.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "fastify": "^4.28.1",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}

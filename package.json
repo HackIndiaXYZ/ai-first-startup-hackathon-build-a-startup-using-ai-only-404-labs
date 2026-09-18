@@ -17,6 +17,12 @@
     "test:agent-checkout": "npm --prefix agentpay run test:agent-checkout",
     "test:real-agent-payment": "npm --prefix agentpay run test:real-agent-payment",
     "test:sdk-ts": "npm --prefix agentpay run test:sdk-ts",
-    "test:sdk-py": "npm --prefix agentpay run test:sdk-py"
+    "test:sdk-py": "npm --prefix agentpay run test:sdk-py",
+    "agent": "npm --prefix agent run agent",
+    "agent:dev": "npm --prefix agent run agent:dev",
+    "agent:serve": "npm --prefix agent run serve",
+    "test:agent": "npm --prefix agent test",
+    "test:agent-security": "npm --prefix agent run test:security",
+    "test:agent-e2e": "npm --prefix agent run test:e2e"
   }
 }
