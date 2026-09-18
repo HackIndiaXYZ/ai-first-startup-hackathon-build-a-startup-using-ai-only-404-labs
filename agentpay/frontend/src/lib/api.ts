@@ -18,7 +18,7 @@ export function resolveApiBase(): string {
   }
 
   if (!url) {
-    url = 'http://localhost:3001';
+    url = 'https://frame-backend-868z.onrender.com';
   }
 
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
